@@ -1,0 +1,168 @@
+<h1 id="mathlang-documentation-">MathLang Documentation.</h1>
+<h2 id="create-file-">Create file.</h2>
+<p>Create file like...</p>
+<pre><code>*<span class="hljs-selector-class">.lmtl</span>
+</code></pre><h2 id="run-it-">Run it.</h2>
+<p>To run file we need to run this command in console.<br><br>
+For Console Command Line.</p>
+<pre><code class="lang-cmd"><span class="hljs-keyword">Path</span>\LMathLang PathToMathLang <span class="hljs-keyword">File</span>: <span class="hljs-keyword">String</span> PrintState: Y/n
+</code></pre>
+<p>For PowerShell.</p>
+<pre><code class="lang-cmd">./<span class="hljs-keyword">Path</span>\LMathLang PathToMathLang <span class="hljs-keyword">File</span>: <span class="hljs-keyword">String</span> PrintState: Y/n
+</code></pre>
+<h2 id="hello-world-app-">Hello World App.</h2>
+<p>Create project and write next code.</p>
+<pre><code><span class="hljs-built_in">write</span>:Hello World!
+</code></pre><p>Lets run it, using command...<br><br>
+For Console Command Line.</p>
+<pre><code class="lang-cmd"><span class="hljs-attribute">LMathLang</span> PathToMathlang <span class="hljs-regexp">*.lmtl</span> n
+</code></pre>
+<p>For PowerShell.</p>
+<pre><code class="lang-cmd">./LMathLang PathToMathlang *<span class="hljs-selector-class">.lmtl</span> n
+</code></pre>
+<p>When we run, we see it.</p>
+<pre><code>Hello World!
+</code></pre><h2 id="print-version-of-language-">Print version of language.</h2>
+<p>Lets write this in our file.</p>
+<pre><code><span class="hljs-attribute">write</span>:The version is 
+<span class="hljs-attribute">write</span>:<span class="hljs-variable">@Version</span>!
+</code></pre><p>When we run, wee see next.</p>
+<pre><code>The <span class="hljs-built_in">version</span> <span class="hljs-keyword">is</span> <span class="hljs-number">1.0</span>!
+</code></pre><h2 id="commentaries-">Commentaries.</h2>
+<pre><code>? Commentaries starting <span class="hljs-keyword">with</span> <span class="hljs-string">"?"</span> keyword.
+? If you <span class="hljs-built_in">write</span> comment keyword <span class="hljs-keyword">without</span> <span class="hljs-literal">space</span>, language will throw you <span class="hljs-keyword">a</span> warning.
+</code></pre><h2 id="variables-">Variables.</h2>
+<pre><code>? It's very easy to <span class="hljs-keyword">create</span> variables.
+<span class="hljs-keyword">def</span> <span class="hljs-keyword">name</span> = <span class="hljs-keyword">value</span>
+</code></pre><h2 id="types-">Types.</h2>
+<pre><code>? Number.
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">x</span> </span>= <span class="hljs-number">1.0</span>
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">y</span> </span>= <span class="hljs-number">1</span>
+
+? String.
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">z</span> </span>= value
+
+? Bool.
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">g</span> </span>= <span class="hljs-literal">true</span>
+</code></pre><h2 id="print-variable-">Print variable.</h2>
+<pre><code>? How to print variable content?
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">x</span> </span>= Var1\nVar2\nVar3
+plink:x
+</code></pre><p>Result is...</p>
+<pre><code><span class="hljs-attribute">Var1</span>
+Var2
+Var3
+</code></pre><h2 id="semicolons-">Semicolons?</h2>
+<p>We need to write semicolon, only if this a math operation, else we don&#39;t need to do this.</p>
+<h2 id="math-problems-">Math problems.</h2>
+<p>Main goal of language, math.<br>
+So, lets speak about math problems in language.</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">x</span> </span>= <span class="hljs-number">5</span>
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">y</span> </span>= <span class="hljs-number">5</span>
+
+x + y;
+</code></pre><p>Lets run it, using command...<br><br>
+For Console Command Line.</p>
+<pre><code class="lang-cmd"><span class="hljs-attribute">LMathLang</span> PathToMathlang <span class="hljs-regexp">*.lmtl</span> n
+</code></pre>
+<p>For PowerShell.</p>
+<pre><code class="lang-cmd">./LMathLang PathToMathlang *<span class="hljs-selector-class">.lmtl</span> n
+</code></pre>
+<p>Result...</p>
+<pre><code><span class="hljs-number">10</span>
+</code></pre><p>That&#39;s so fun!</p>
+<pre><code><span class="hljs-symbol">456 </span>* <span class="hljs-number">987</span>;
+</code></pre><p>Result...</p>
+<pre><code><span class="hljs-number">450072</span>
+</code></pre><p>Another example.</p>
+<pre><code><span class="hljs-symbol">5 </span>* <span class="hljs-number">1</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">2</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">3</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">4</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">5</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">6</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">7</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">8</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">9</span>;
+<span class="hljs-symbol">5 </span>* <span class="hljs-number">10</span>;
+</code></pre><p>Result...</p>
+<pre><code><span class="hljs-number">5</span>, <span class="hljs-number">10</span>, <span class="hljs-number">15</span>, <span class="hljs-number">20</span>, <span class="hljs-number">25</span>, <span class="hljs-number">30</span>, <span class="hljs-number">35</span>, <span class="hljs-number">40</span>, <span class="hljs-number">45</span>, <span class="hljs-number">50</span>
+</code></pre><p>That&#39;s so easy!</p>
+<h2 id="enable-language-features-">Enable language features.</h2>
+<p>In language we have only 2 features.</p>
+<p><ul>
+    <li>Algebra - Use algebra in your code.</li>
+    <li>Instantly - Eval problems instantly.</li>
+</ul>
+How add feature.<br><br>
+Without algebra using.<br><br></p>
+<pre><code><span class="hljs-built_in">Cos</span>(1);
+
+? <span class="hljs-keyword">An</span> Lua MathLang <span class="hljs-keyword">error</span> raised.
+?     LuaMathLangError: <span class="hljs-keyword">An</span> <span class="hljs-keyword">error</span> happened <span class="hljs-keyword">while</span> solving problem.
+?         <span class="hljs-keyword">Line</span>: 1.
+</code></pre><p>With algebra.</p>
+<pre><code><span class="hljs-keyword">add </span>algebra<span class="hljs-comment">;</span>
+
+Cos(<span class="hljs-number">1</span>)<span class="hljs-comment">;</span>
+Sin(<span class="hljs-number">1</span>)<span class="hljs-comment">;</span>
+</code></pre><p>Run it.<br></p>
+<p>Result...</p>
+<pre><code>0<span class="hljs-selector-class">.8414709848079</span>, 0<span class="hljs-selector-class">.54030230586814</span>
+</code></pre><p>Using instantly.</p>
+<pre><code><span class="hljs-keyword">add</span> instantly<span class="hljs-comment">;</span>
+
+<span class="hljs-symbol">write:</span><span class="hljs-number">1</span>/<span class="hljs-number">3</span>\n
+<span class="hljs-number">5</span> * <span class="hljs-number">2</span><span class="hljs-comment">;</span>
+<span class="hljs-symbol">write:</span><span class="hljs-number">2</span>/<span class="hljs-number">3</span>\n
+<span class="hljs-number">5</span> * <span class="hljs-number">3</span><span class="hljs-comment">;</span>
+<span class="hljs-symbol">write:</span><span class="hljs-number">3</span>/<span class="hljs-number">3</span>\n
+<span class="hljs-number">5</span> * <span class="hljs-number">4</span><span class="hljs-comment">;</span>
+</code></pre><p>Result.</p>
+<pre><code><span class="hljs-number">1</span>/<span class="hljs-number">3</span>
+<span class="hljs-number">10</span>
+<span class="hljs-number">2</span>/<span class="hljs-number">3</span>
+<span class="hljs-number">15</span>
+<span class="hljs-number">3</span>/<span class="hljs-number">3</span>
+<span class="hljs-number">20</span>
+</code></pre><p>Use instantly if you want print data in runtime.</p>
+<h2 id="add-space-to-string-">Add space to string?</h2>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">x</span> </span>= Hello~S
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">y</span> </span>= World!
+
+plink:x
+plink:y
+</code></pre><p>Result...</p>
+<pre><code>Hello World!
+</code></pre><h2 id="exceptions-">Exceptions.</h2>
+<p>MathLang have only 6 exceptions.</p>
+<p><ul>
+    <li>LuaMathLangException</li>
+    <li>LuaMathLangSyntaxError</li>
+    <li>LuaMathLangMissingArgs</li>
+    <li>LuaMathLangUsingError</li>
+    <li>LuaMathLangLinkError</li>
+    <li>LuaMathLangSolutionError</li>
+</ul><br>
+LuaMathLangException - Something other than another.<br>
+LuaMathLangSyntaxError - Syntax error.<br>
+LuaMathLangMissingArgs - Missing arguments in object.<br>
+LuaMathLangUsingError - Error using object.<br>
+LuaMathLangLinkError - Link is not defined.<br>
+LuaMathLangSolutionError - Error while solving math problem.<br>
+<br>
+Lets explore exception message.
+<br><br></p>
+<pre><code>[ <span class="hljs-keyword">An</span> Lua MathLang <span class="hljs-keyword">error</span> raised. ] - Message <span class="hljs-keyword">about</span> <span class="hljs-keyword">error</span> happened.
+    [ LuaMathLangError ]: [ <span class="hljs-keyword">An</span> <span class="hljs-keyword">error</span> happened <span class="hljs-keyword">while</span> solving problem. ] - Exception <span class="hljs-keyword">type</span>, exception message.
+        <span class="hljs-keyword">Line</span>: [ 1 ]. - <span class="hljs-keyword">Line</span> where <span class="hljs-keyword">error</span> happened. <span class="hljs-keyword">If</span> <span class="hljs-keyword">line</span> is ?, that <span class="hljs-keyword">means</span> <span class="hljs-keyword">error</span> was happened not <span class="hljs-keyword">in</span> code.
+</code></pre><h2 id="about-language-">About language.</h2>
+<p>This language was created in 14.01.2022!<br>
+On moment writing this documentation, version of language is 1.0!<br>
+Type of language is interpreted.<br>
+Author is Ivan Perzhinsky.<br>
+Licension is Mit.<br>
+Version is 1.0!<br><br></p>
+<h1 id="end-">End.</h1>
+<p>Now you know, how to use this language, you know all information about this language! I hope you like my language. Have a good day, bye!
+<br><br><hr><p align="center">^_^</p><br></p>
