@@ -49,6 +49,7 @@ Allowed = {
     "add instantly",
     "def",
     "plink",
+    "assertion",
     "PI"
 }
 
