@@ -46,7 +46,7 @@ MathLanguageAPI.MathLanguageObjects = {}
 MathLanguageAPI.LuaCompilerFunctions = require("cmpf")
 
 -- A language version.
-MathLanguageAPI.Version = 1.0
+MathLanguageAPI.Version = 1.1
 
 -- Source file.
 MathLanguageAPI.MathLanguage.Source = nil
