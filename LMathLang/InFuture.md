@@ -3,5 +3,5 @@ List of things that will be added in the future. List can be updated.
  - ❌ Cycles.
  - ❌ Break points.
  - ❌ Mutable variables.
- - ❌ Assertion.
+ - ✔️ Assertion.
  - ❌ Run commands in console from code.
