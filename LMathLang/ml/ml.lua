@@ -32,7 +32,7 @@ MathLang.Source = nil
 MathLang.NewLine = "\n"
 MathLang.Semicolon = ";"
 
-MathLang.Version = 1.0
+MathLang.Version = 1.1
 
 function MathLang.NewSource(File)
     if not MathLangTools.IsFileExist(File) then
@@ -73,7 +73,9 @@ function MathLang.ParseSource()
                 if not MathLangTools.Startswith(Line, "write") then
                     if not MathLangTools.Startswith(Line, "def") then
                         if not MathLangTools.Startswith(Line, "plink") then
-                            Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                            if not MathLangTools.Startswith(Line, "assertion") then
+                                Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                            end
                         end
                     end
                 end
@@ -123,9 +125,7 @@ function MathLang.SolveIt(Beautify)
             local ToBool = {["true"]=true, ["false"]=false}
 
             if not MathLangTools.IsNull(tonumber(Value)) then
-                _G[Name] = math.floor(math.abs(tonumber(Value)))
-            elseif not ToBool[Value] == nil then
-                _G[Name] = ToBool[Value]
+                load(string.format("%s = %s", Name, tostring(math.floor(math.abs(tonumber(Value))))))()
             else
                 local SlicedText = MathLangTools.Slice(SplittedOnSpaces, 3, false)
                 local TheText = ""
@@ -139,7 +139,7 @@ function MathLang.SolveIt(Beautify)
                 TheText = MathLangTools.JoinList(Characters)
                 TheText = TheText:gsub("~S", " ")
 
-                _G[Name] = tostring(TheText):gsub([[\n]], "\n")
+                load(string.format("%s = \"%s\"", Name, tostring(TheText)))()
             end
         end
     end
@@ -191,6 +191,25 @@ function MathLang.SolveIt(Beautify)
                 end
             end
 
+            if MathLangTools.Startswith(Line, Allowed[27]) then
+                local Arguments = MathLangTools.SplitString(Line, ":")
+
+                table.remove(Arguments, 1)
+
+                local Expression = Arguments[1]
+                local Message = Arguments[2]
+
+                local EvaluatedExpression = load("return "..Expression)()
+
+                if EvaluatedExpression == nil then
+                    Throw(Exceptions[4], "Invalid expression", LineNum)
+                end
+
+                if not EvaluatedExpression then
+                    Throw(Warning, Message, LineNum)
+                end
+            end
+
             if MathLangTools.Startswith(Line, Allowed[22]) then
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[23]) then
@@ -200,6 +219,8 @@ function MathLang.SolveIt(Beautify)
             elseif MathLangTools.Startswith(Line, Allowed[25]) then
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[26]) then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[27]) then
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, "help!") then
                 -- Do nothing.
