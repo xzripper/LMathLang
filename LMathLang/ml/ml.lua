@@ -32,7 +32,7 @@ MathLang.Source = nil
 MathLang.NewLine = "\n"
 MathLang.Semicolon = ";"
 
-MathLang.Version = 1.1
+MathLang.Version = 1.2
 
 function MathLang.NewSource(File)
     if not MathLangTools.IsFileExist(File) then
@@ -74,7 +74,9 @@ function MathLang.ParseSource()
                     if not MathLangTools.Startswith(Line, "def") then
                         if not MathLangTools.Startswith(Line, "plink") then
                             if not MathLangTools.Startswith(Line, "assertion") then
-                                Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                                if not MathLangTools.Startswith(Line, "uinp") then
+                                    Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                                end
                             end
                         end
                     end
@@ -125,7 +127,8 @@ function MathLang.SolveIt(Beautify)
             local ToBool = {["true"]=true, ["false"]=false}
 
             if not MathLangTools.IsNull(tonumber(Value)) then
-                load(string.format("%s = %s", Name, tostring(math.floor(math.abs(tonumber(Value))))))()
+                _G[Name] = tonumber(Value)
+
             else
                 local SlicedText = MathLangTools.Slice(SplittedOnSpaces, 3, false)
                 local TheText = ""
@@ -139,12 +142,35 @@ function MathLang.SolveIt(Beautify)
                 TheText = MathLangTools.JoinList(Characters)
                 TheText = TheText:gsub("~S", " ")
 
-                load(string.format("%s = \"%s\"", Name, tostring(TheText)))()
+                if MathLangTools.Startswith(Name, "EVAL_") then
+                    local Evaled = load("return "..TheText)()
+
+                    if MathLangTools.IsNull(Evaled) then
+                        Throw(Exceptions[3], "Unable to eval expression.", LineNum)
+                    end
+
+                    TheText = Evaled
+
+                    Name = Name:gsub("EVAL_", "")
+
+                    _G[Name] = TheText
+                else
+                    if MathLangTools.Startswith(Value, "!") then
+                        local Var = Value:sub(2)
+                        local Content = _G[Var]
+
+                        if MathLangTools.IsNull(Content) then
+                            Throw(Exceptions[5], string.format("\"%s\" is not defined.", Var), LineNum)
+                        end
+
+                        _G[Name] = tostring(Content:gsub([[\n]], "\n"))
+                    else
+                        _G[Name] = tostring(TheText:gsub([[\n]], "\n"))
+                    end
+                end
             end
         end
-    end
 
-    for LineNum, Line in ipairs(Lines) do
         if MathLangTools.Startswith(Line, "?") then
             local Character = Line:sub(2, 2)
             local Space = " "
@@ -153,15 +179,14 @@ function MathLang.SolveIt(Beautify)
                 Throw(Warning, "Use space after commentary declaration.", LineNum, false)
             end
         else
-            -- Removed due errors.
-            -- if not MathLangTools.IsElementInString(Line, Allowed, true) then
-            --     Throw(Exceptions[4], "Invalid line.", LineNum)
-            -- end
-
             if MathLangTools.Startswith(Line, Allowed[22]) then
                 local Text = MathLangTools.SplitString(Line, ":")
 
                 table.remove(Text, 1)
+
+                if #Text < 1 then
+                    Throw(Exceptions[3], "Not enough arguments given.", LineNum)
+                end
 
                 if #Text == 1 then
                     local OnlyText = Text[1]:gsub([[\n]], "\n")
@@ -179,11 +204,17 @@ function MathLang.SolveIt(Beautify)
 
                 if #Var > 1 then
                     Throw(Exceptions[4], "Too many arguments given.", LineNum)
-                elseif #Var == 1 then
+                end
+
+                if #Var < 1 then
+                    Throw(Exceptions[3], "Not enough arguments.", LineNum)
+                end
+
+                if #Var == 1 then
                     local Name = MathLangTools.Strip(Var[1])
                     local Content = _G[Name]
 
-                    if Content == nil then
+                    if MathLangTools.IsNull(Content) then
                         Throw(Exceptions[5], string.format("\"%s\" is not defined.", Name), LineNum)
                     else
                         io.write(tostring(Content))
@@ -196,17 +227,61 @@ function MathLang.SolveIt(Beautify)
 
                 table.remove(Arguments, 1)
 
+                if #Arguments > 2 then
+                    Throw(Exceptions[4], "Too many arguments given.", LineNum)
+                end
+
+                if #Arguments < 2 then
+                    Throw(Exceptions[3], "Not enough arguments given.", LineNum)
+                end
+
                 local Expression = Arguments[1]
                 local Message = Arguments[2]
 
                 local EvaluatedExpression = load("return "..Expression)()
 
-                if EvaluatedExpression == nil then
-                    Throw(Exceptions[4], "Invalid expression", LineNum)
+                if MathLangTools.IsNull(Expression) then
+                    Throw(Exceptions[4], "Invalid expression.", LineNum)
                 end
 
                 if not EvaluatedExpression then
                     Throw(Warning, Message, LineNum)
+                end
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[28]) then
+                local Arguments = MathLangTools.SplitString(Line, ":")
+
+                table.remove(Arguments, 1)
+
+                if #Arguments > 3 then
+                    Throw(Exceptions[4], "Too many arguments given.", LineNum)
+                end
+
+                if #Arguments < 3 then
+                    Throw(Exceptions[3], "Not enough arguments.", LineNum) 
+                end
+
+                local Placeholder = Arguments[1]:gsub("~C", ":")
+                local WriteTo = Arguments[2]
+                local ConvertTo = Arguments[3]:lower()
+
+                io.write(Placeholder)
+
+                local Input = io.read("l")
+
+                if ConvertTo == "integer" then
+                    local Converted = tonumber(Input)
+
+                    if MathLangTools.IsNull(Converted) then
+                        Converted = -0.0
+                    end
+
+                    _G[WriteTo] = Converted
+                elseif ConvertTo == "string" then
+                    _G[WriteTo] = Input
+                else
+                    Throw(Exceptions[4], "Invalid type.", LineNum)
                 end
             end
 
@@ -222,6 +297,8 @@ function MathLang.SolveIt(Beautify)
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[27]) then
                 -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[28]) then
+                -- Do nothing.
             elseif MathLangTools.Startswith(Line, "help!") then
                 -- Do nothing.
             else
@@ -235,6 +312,10 @@ function MathLang.SolveIt(Beautify)
                     end
 
                     table.insert(Results, Equals)
+
+                    if MathLangTools.Endswith(Line, "0;") then
+                        Throw(Warning, "Useless operation.", LineNum, false)
+                    end
                 end
             end
         end
