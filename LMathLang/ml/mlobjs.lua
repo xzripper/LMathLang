@@ -50,6 +50,7 @@ Allowed = {
     "def",
     "plink",
     "assertion",
+    "uinp",
     "PI"
 }
 
