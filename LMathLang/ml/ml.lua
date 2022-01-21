@@ -32,7 +32,7 @@ MathLang.Source = nil
 MathLang.NewLine = "\n"
 MathLang.Semicolon = ";"
 
-MathLang.Version = 1.2
+MathLang.Version = 1.3
 
 function MathLang.NewSource(File)
     if not MathLangTools.IsFileExist(File) then
@@ -67,6 +67,10 @@ function MathLang.ParseSource()
         return Lines
     end
 
+    if not MathLangTools.Endswith(Content, MathLang.NewLine) then
+        Throw(Warning, "Missing newline at end of file.", #Lines, false)
+    end
+
     for LineNum, Line in ipairs(Lines) do
         if not MathLangTools.Endswith(Line, MathLang.Semicolon) then
             if not MathLangTools.Startswith(Line, "?") then
@@ -75,7 +79,13 @@ function MathLang.ParseSource()
                         if not MathLangTools.Startswith(Line, "plink") then
                             if not MathLangTools.Startswith(Line, "assertion") then
                                 if not MathLangTools.Startswith(Line, "uinp") then
-                                    Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                                    if not MathLangTools.Startswith(Line, "includes") then
+                                        if not MathLangTools.Startswith(Line, "call") then
+                                            if not MathLangTools.Startswith(Line, "for") then
+                                                Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                                            end
+                                        end
+                                    end
                                 end
                             end
                         end
@@ -285,6 +295,128 @@ function MathLang.SolveIt(Beautify)
                 end
             end
 
+            if MathLangTools.Startswith(Line, Allowed[29]) then
+                local Package = MathLangTools.SplitString(Line, " ")[2]:sub(2):sub(1, -2)
+
+                if Package == "files" then
+                    Package = "builtins.files" 
+                end
+
+                local function ImportIt()
+                    require(Package)
+                end
+
+                if not pcall(ImportIt) then
+                    Throw(Exceptions[4], "Failed to include package.", LineNum)
+                end
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[30]) then
+                local Arguments = MathLangTools.SplitString(Line, ":")
+
+                table.remove(Arguments, 1)
+
+                if #Arguments == 0 then
+                    Throw(Exceptions[3], "Not enough arguments given.", LineNum)
+                end
+
+                local Function = Arguments[1]
+
+                local FunctionArguments = {}
+
+                if #Arguments > 1 then
+                    local Args = MathLangTools.Slice(Arguments, 1, false)
+
+                    for Index=1, #Args do
+                        if type(Args[Index]) == "string" then
+                            FunctionArguments[Index] = Args[Index]:gsub("~C", ":")
+                        end
+                    end
+                end
+
+                local ToLoad = ""
+
+                if #FunctionArguments == 0 then
+                    ToLoad = string.format("%s()", Function)
+                else
+                    ToLoad = string.format("%s(%s)", Function, MathLangTools.JoinList(FunctionArguments, ", "))
+                end
+
+                local function Run()
+                    local Output = load("return "..ToLoad)()
+
+                    local ReturnsSomething = not MathLangTools.IsNull(Output)
+
+                    if ReturnsSomething then
+                        local ReturnType = type(Output)
+
+                        if ReturnType == "string" or ReturnType == "number" then
+                            print(tostring(Output))
+                        elseif ReturnType == "table" then
+                            local Table = Output
+
+                            for Index=1, #Table do
+                                Table[Index] = tostring(Table[Index])
+                            end
+
+                            print(string.format("<[%s]>", MathLangTools.JoinList(Output, ", ")))
+                        end
+                    end
+                end
+
+                if not pcall(Run) then
+                    Throw(Exceptions[4], "Unnable to run function.", LineNum)
+                end
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[31]) then
+                local Arguments = MathLangTools.SplitString(Line, ":")
+
+                table.remove(Arguments, 1)
+
+                if #Arguments < 3 then
+                    Throw(Exceptions[3], "Not enough arguments given.", LineNum)
+                end
+
+                local Start = tonumber(Arguments[1])
+                local End = tonumber(Arguments[2])
+                local FunctionName = Arguments[3]
+
+                if MathLangTools.IsNull(Start) or MathLangTools.IsNull(End) then
+                    Throw(Exceptions[4], "Start and end must be integer.", LineNum)
+                end
+
+                if MathLangTools.IsNull(_G[FunctionName]) then
+                    Throw(Exceptions[4], "Function is not defined.", LineNum)
+                end
+
+                local FunctionArguments = {}
+
+                if #Arguments > 3 then
+                    local Args = MathLangTools.Slice(Arguments, 3, false)
+
+                    for Index=1, #Args do
+                        if type(Args[Index]) == "string" then
+                            FunctionArguments[Index] = Args[Index]:gsub("~C", ":")
+                        end
+                    end
+                end
+
+                for Number=Start, End do
+                    local function RunIt()
+                        if #FunctionArguments == 0 then
+                            load(string.format("%s(%s)", FunctionName, tostring(Number)))()
+                        else
+                            load(string.format("%s(%s, %s)", FunctionName, tostring(Number), MathLangTools.JoinList(FunctionArguments, ", ")))()
+                        end
+                    end
+
+                    if not pcall(RunIt) then
+                        Throw(Exceptions[4], "Exception raised in cycle life time.", LineNum)
+                    end
+                end
+            end
+
             if MathLangTools.Startswith(Line, Allowed[22]) then
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[23]) then
@@ -299,6 +431,12 @@ function MathLang.SolveIt(Beautify)
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[28]) then
                 -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[29]) then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[30]) then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[31]) then
+                -- Do nothing.
             elseif MathLangTools.Startswith(Line, "help!") then
                 -- Do nothing.
             else
@@ -307,15 +445,15 @@ function MathLang.SolveIt(Beautify)
                 if MathLangTools.IsNull(Equals) then
                     Throw(Exceptions[6], "An error happened while solving problem.", LineNum)
                 else
+                    if type(Equals) ~= "number" then
+                        Throw(Exceptions[6], "Invalid return.", LineNum)
+                    end
+
                     if UsingInstantly then
                         print(Equals)
                     end
 
                     table.insert(Results, Equals)
-
-                    if MathLangTools.Endswith(Line, "0;") then
-                        Throw(Warning, "Useless operation.", LineNum, false)
-                    end
                 end
             end
         end
