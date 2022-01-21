@@ -51,6 +51,9 @@ Allowed = {
     "plink",
     "assertion",
     "uinp",
+    "includes",
+    "call",
+    "for",
     "PI"
 }
 
