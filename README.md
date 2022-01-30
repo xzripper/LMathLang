@@ -43,7 +43,7 @@
 I maded it in 4 days.<br>
 Was it hard? I can answer, medium.<br>
 Where did the idea come from? I was searching idea for my project, and idea came in my head.<br>
-What will happen in the future? In the plans, I want to update and add new features to the language. You can look first ideas <a href="https://github.com/xzripper/LMathLang/blob/main/LMathLang/InFuture.md">here</a>.**
+What will happen in the future? In the plans, I want to update and add new features to the language.
 
 ## Warning.
 ### In developing.
