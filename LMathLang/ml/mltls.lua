@@ -117,7 +117,7 @@ function MathLangTools.IsElementInString(String, Element, MinIsOne)
 end
 
 function MathLangTools.EvalProblem(Problem)
-    function Eval() 
+    local function Eval() 
         local Result = load("return "..Problem.."")()
 
         if type(Result) == "number" then
@@ -129,10 +129,15 @@ function MathLangTools.EvalProblem(Problem)
         end
     end
 
-    if pcall(Eval) then
+    local Ok, ErrorObject = pcall(Eval)
+
+    if Ok then
         return Eval()
-    else
-        return nil
+    elseif not Ok then
+        local Line, ErrorMessage = tostring(ErrorObject):match(":(%d+): (.*)")
+        local ErrorInfo = {Message = ErrorMessage, Line = tonumber(Line)}
+
+        return ErrorInfo
     end
 end
 
