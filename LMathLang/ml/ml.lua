@@ -32,7 +32,7 @@ MathLang.Source = nil
 MathLang.NewLine = "\n"
 MathLang.Semicolon = ";"
 
-MathLang.Version = 1.3
+MathLang.Version = 1.4
 
 function MathLang.NewSource(File)
     if not MathLangTools.IsFileExist(File) then
@@ -138,7 +138,6 @@ function MathLang.SolveIt(Beautify)
 
             if not MathLangTools.IsNull(tonumber(Value)) then
                 _G[Name] = tonumber(Value)
-
             else
                 local SlicedText = MathLangTools.Slice(SplittedOnSpaces, 3, false)
                 local TheText = ""
@@ -159,21 +158,40 @@ function MathLang.SolveIt(Beautify)
                         Throw(Exceptions[3], "Unable to eval expression.", LineNum)
                     end
 
+                    if type(Evaled) ~= "number" then
+                        Throw(Exceptions[4], string.format("Expected problem result as integer, got %s.", type(Evaled)), LineNum)
+                    end
+
                     TheText = Evaled
 
                     Name = Name:gsub("EVAL_", "")
 
                     _G[Name] = TheText
+                elseif TheText == "ct!" then
+                    _G[Name] = os.time()
+                elseif TheText == "fct!" then
+                    _G[Name] = os.date("%Hh %Mm %Ss")
                 else
                     if MathLangTools.Startswith(Value, "!") then
-                        local Var = Value:sub(2)
-                        local Content = _G[Var]
+                        local Raw = MathLangTools.Startswith(Name, "RAW_")
 
-                        if MathLangTools.IsNull(Content) then
-                            Throw(Exceptions[5], string.format("\"%s\" is not defined.", Var), LineNum)
+                        if not Raw then
+                            local Content = _G[Value:sub(2)]
+
+                            if type(Content) == "string" then
+                                if MathLangTools.IsNull(Content) then
+                                    Throw(Exceptions[5], string.format("\"%s\" is not defined.", Var), LineNum)
+                                end
+
+                                _G[Name] = tostring(Content:gsub([[\n]], "\n"))
+                            elseif type(Content) == "number" then
+                                _G[Name] = Content
+                            end
+                        elseif Raw then
+                            Name = Name:gsub("RAW_", "")
+
+                            _G[Name] = tostring(TheText:gsub([[\n]], "\n"))
                         end
-
-                        _G[Name] = tostring(Content:gsub([[\n]], "\n"))
                     else
                         _G[Name] = tostring(TheText:gsub([[\n]], "\n"))
                     end
@@ -296,10 +314,28 @@ function MathLang.SolveIt(Beautify)
             end
 
             if MathLangTools.Startswith(Line, Allowed[29]) then
+                if MathLangTools.SplitString(Line, " ")[2] == nil then
+                    Throw(Exceptions[4], "Missing package name.", LineNum)
+                end
+
                 local Package = MathLangTools.SplitString(Line, " ")[2]:sub(2):sub(1, -2)
+
+                if #MathLangTools.SplitString(Package, ".") > 1 then
+                    Throw(Exceptions[4], "Use '::' instead of dot.", LineNum)
+                end
+
+                Package = Package:gsub("::", ".")
 
                 if Package == "files" then
                     Package = "builtins.files" 
+                elseif Package == "algos" then
+                    Package = "builtins.algos"
+                elseif Package == "pc" then
+                    Package = "builtins.pc"
+                else
+                    if not MathLangTools.IsFileExist(Package:gsub("[.]", "\\")..".lua") then
+                        Throw(Exceptions[4], "Package not exists.", LineNum)
+                    end
                 end
 
                 local function ImportIt()
@@ -308,6 +344,17 @@ function MathLang.SolveIt(Beautify)
 
                 if not pcall(ImportIt) then
                     Throw(Exceptions[4], "Failed to include package.", LineNum)
+                end
+
+                local PackageScobes = MathLangTools.SplitString(Line, " ")[2]:sub(1, 1)
+                PackageScobes = PackageScobes..MathLangTools.SplitString(Line, " ")[2]:sub(-1)
+
+                local Scobes = {"()", "[]", "{}"}
+
+                for _, Scobe in ipairs(Scobes) do
+                    if PackageScobes == Scobe then
+                        Throw(Exceptions[4], string.format("Expected '<>' got '%s'.", PackageScobes), LineNum)
+                    end
                 end
             end
 
@@ -364,6 +411,7 @@ function MathLang.SolveIt(Beautify)
                     end
                 end
 
+                -- Add better exception handling, like in problem solving exception handling.
                 if not pcall(Run) then
                     Throw(Exceptions[4], "Unnable to run function.", LineNum)
                 end
@@ -417,6 +465,10 @@ function MathLang.SolveIt(Beautify)
                 end
             end
 
+            if MathLangTools.Startswith(Line, Allowed[32]) then
+                os.exit(0)
+            end
+
             if MathLangTools.Startswith(Line, Allowed[22]) then
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[23]) then
@@ -437,13 +489,31 @@ function MathLang.SolveIt(Beautify)
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[31]) then
                 -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[32]) then
+                -- Do nothing.
             elseif MathLangTools.Startswith(Line, "help!") then
                 -- Do nothing.
             else
                 local Equals = MathLangTools.EvalProblem(Line)
 
-                if MathLangTools.IsNull(Equals) then
-                    Throw(Exceptions[6], "An error happened while solving problem.", LineNum)
+                if type(Equals) == "table" then
+                    local Message = Equals.Message
+                    local Details = ""
+
+                    local DetailsByMessage = {
+                        ["attempt to perform arithmetic on a nil value"] = "Using non-defined variable in problem.",
+                        ["attempt to add a 'number' with a 'string'"] = "Trying to add string to number.",
+                        ["attempt to add a 'string' with a 'number'"] = "Trying to add number to string.",
+                        ["attempt to perform arithmetic on a boolean value"] = "Trying do operations on a boolean.",
+                        ["attempt to perform arithmetic on a table value"] = "Trying do operations on a array.",
+                        ["attempt to call a nil value"] = "Syntax wrong math problem."
+                    }
+
+                    for LuaMessage, LanguageMessage in pairs(DetailsByMessage) do
+                        if MathLangTools.Startswith(Message, LuaMessage) then
+                            Throw(Exceptions[6], LanguageMessage, LineNum)
+                        end
+                    end
                 else
                     if type(Equals) ~= "number" then
                         Throw(Exceptions[6], "Invalid return.", LineNum)
