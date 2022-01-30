@@ -54,6 +54,7 @@ Allowed = {
     "includes",
     "call",
     "for",
+    "break",
     "PI"
 }
 
