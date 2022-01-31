@@ -32,7 +32,7 @@ MathLang.Source = nil
 MathLang.NewLine = "\n"
 MathLang.Semicolon = ";"
 
-MathLang.Version = 1.4
+MathLang.Version = 1.5
 
 function MathLang.NewSource(File)
     if not MathLangTools.IsFileExist(File) then
@@ -53,6 +53,7 @@ function MathLang.ReadSource()
     local Content = Opened:read("a")
 
     Content = Content:gsub("@Version", tostring(MathLang.Version))
+    Content = Content:gsub("@Language", "LMathLang")
 
     Opened:close()
 
@@ -152,11 +153,13 @@ function MathLang.SolveIt(Beautify)
                 TheText = TheText:gsub("~S", " ")
 
                 if MathLangTools.Startswith(Name, "EVAL_") then
-                    local Evaled = load("return "..TheText)()
+                    local Evaled = load("return "..TheText)
 
                     if MathLangTools.IsNull(Evaled) then
                         Throw(Exceptions[3], "Unable to eval expression.", LineNum)
                     end
+
+                    Evaled = Evaled()
 
                     if type(Evaled) ~= "number" then
                         Throw(Exceptions[4], string.format("Expected problem result as integer, got %s.", type(Evaled)), LineNum)
@@ -168,9 +171,72 @@ function MathLang.SolveIt(Beautify)
 
                     _G[Name] = TheText
                 elseif TheText == "ct!" then
-                    _G[Name] = os.time()
+                    local Raw = MathLangTools.Startswith(Name, "RAW_")
+
+                    if Raw then
+                        Name = Name:gsub("RAW_", "")
+
+                        _G[Name] = TheText
+                    elseif not Raw then
+                        _G[Name] = os.time()
+                    end
                 elseif TheText == "fct!" then
-                    _G[Name] = os.date("%Hh %Mm %Ss")
+                    local Raw = MathLangTools.Startswith(Name, "RAW_")
+
+                    if Raw then
+                        Name = Name:gsub("RAW_", "")
+
+                        _G[Name] = TheText
+                    elseif not Raw then
+                        _G[Name] = os.date("%Hh %Mm %Ss")
+                    end
+                elseif MathLangTools.Startswith(TheText, "%[]") then
+                    local Data = MathLangTools.SplitString(TheText, " ")
+
+                    if MathLangTools.IsNull(Data[2]) then
+                        Throw(Exceptions[1], "Missing array elements.", LineNum)
+                    end
+
+                    local ArrayInitializer = Data[1]
+                    local Elements = ArrayInitializer:sub(3)
+
+                    if not MathLangTools.Startswith(Elements, "{") then
+                        if Elements ~= "" then
+                            Throw(Exceptions[1], "Missing start of bracket.", LineNum)
+                        end
+                    end
+
+                    Elements = MathLangTools.JoinList(Data, " ")
+
+                    if MathLangTools.Startswith(Elements, "%[] ") then
+                        Elements = Elements:sub(4)
+                    elseif MathLangTools.Startswith(Elements, "%[]") then
+                        Elements = Elements:sub(3)
+                    end
+
+                    if not MathLangTools.Endswith(Elements, "}") then
+                        Throw(Exceptions[1], "Missing end of bracket.", LineNum)
+                    end
+
+                    local AsLuaTable = load("return "..Elements)
+
+                    if MathLangTools.IsNull(AsLuaTable) then
+                        Throw(Exceptions[4], "Failed to create array. (Arrays not fully implemented).", LineNum)
+                    end
+
+                    AsLuaTable = AsLuaTable()
+
+                    for _, Element in ipairs(AsLuaTable) do
+                        if type(Element) ~= "string" then
+                            if type(Element) ~= "number" then
+                                if type(Element) ~= "boolean" then
+                                    Throw(Exceptions[4], "Invalid type.", LineNum)
+                                end
+                            end
+                        end
+                    end
+
+                    _G[Name] = AsLuaTable
                 else
                     if MathLangTools.Startswith(Value, "!") then
                         local Raw = MathLangTools.Startswith(Name, "RAW_")
@@ -245,7 +311,19 @@ function MathLang.SolveIt(Beautify)
                     if MathLangTools.IsNull(Content) then
                         Throw(Exceptions[5], string.format("\"%s\" is not defined.", Name), LineNum)
                     else
-                        io.write(tostring(Content))
+                        if type(Content) ~= "string" then
+                            if type(Content) ~= "number" then
+                                if type(Content) ~= "boolean" then
+                                    io.write(string.format("<#%s> ~ &%s", type(Content), tostring(MathLangTools.SplitString(tostring(Content), ": ")[2])))
+                                else
+                                    io.write(tostring(Content))
+                                end
+                            else
+                                io.write(tostring(Content))
+                            end
+                        else
+                            io.write(tostring(Content))
+                        end
                     end
                 end
             end
@@ -332,6 +410,8 @@ function MathLang.SolveIt(Beautify)
                     Package = "builtins.algos"
                 elseif Package == "pc" then
                     Package = "builtins.pc"
+                elseif Package == "arrays" then
+                    Package = "builtins.arrays"
                 else
                     if not MathLangTools.IsFileExist(Package:gsub("[.]", "\\")..".lua") then
                         Throw(Exceptions[4], "Package not exists.", LineNum)
@@ -389,6 +469,14 @@ function MathLang.SolveIt(Beautify)
                     ToLoad = string.format("%s(%s)", Function, MathLangTools.JoinList(FunctionArguments, ", "))
                 end
 
+                local LanguageVariables = {"MathLang", "MathLangTools"}
+
+                for _, LangVar in ipairs(LanguageVariables) do
+                    if MathLangTools.Startswith(Function, LangVar) then
+                        Throw(Exceptions[4], "Trying to call language objects.", LineNum)
+                    end
+                end
+
                 local function Run()
                     local Output = load("return "..ToLoad)()
 
@@ -397,7 +485,7 @@ function MathLang.SolveIt(Beautify)
                     if ReturnsSomething then
                         local ReturnType = type(Output)
 
-                        if ReturnType == "string" or ReturnType == "number" then
+                        if ReturnType == "string" or ReturnType == "number" or ReturnType == "boolean" then
                             print(tostring(Output))
                         elseif ReturnType == "table" then
                             local Table = Output
