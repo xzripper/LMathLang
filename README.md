@@ -1,3 +1,5 @@
+<p align="center"><img src="LMathLang\LMathLangIcon.png" width="125" height="125"></p>
+
 # LMathLang - Next generation of <a href="https://github.com/xzripper/MathLang/">MathLang</a>.
 ### Improved version of language, and ported on Lua.
 
