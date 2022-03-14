@@ -1,26 +1,15 @@
 files = {}
 
 function files.read(filename)
-    local file = io.open(filename, "r")
-    local content = file:read("a")
-
-    file:close()
-
-    return content
+    return io.open(filename, "r"):read("a")
 end
 
 function files.write(filename, data)
-    local file = io.open(filename, "w")
-
-    file:write(data)
-    file:close()
+    return io.open(filename, "w"):write(data)
 end
 
 function files.append(filename, data)
-    local file = io.open(filename, "a")
-
-    file:write(data)
-    file:close()
+    return io.open(filename, "a"):write(data)
 end
 
 function files.exists(filename)
@@ -28,3 +17,4 @@ function files.exists(filename)
 end
 
 return files
+
