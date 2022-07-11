@@ -7,7 +7,10 @@ function pc.system(Command)
 end
 
 function pc.output(Command)
-    return io.popen(Command):read("*l")
+    local Output = io.popen(Command):read("*a")
+    local OutputLines = MathLangTools.SplitString(Output, "\n")
+
+    return OutputLines
 end
 
 function pc.rename(File, On)

@@ -81,3 +81,7 @@ function arrays.nodup(Array)
 
     return Removed
 end
+
+function arrays.length(Array)
+    return #Array
+end

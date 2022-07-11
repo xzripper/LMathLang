@@ -39,10 +39,6 @@ end
 function algos.hton(Number)
     local Result = load("return "..tostring(Number))()
 
-    if type(Result) ~= "number" then
-        Throw(Exceptions[4], "Not number instance.", Lib(40))
-    end
-
     return Result
 end
 
