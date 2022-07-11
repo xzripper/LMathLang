@@ -32,7 +32,7 @@ MathLang.Source = nil
 MathLang.NewLine = "\n"
 MathLang.Semicolon = ";"
 
-MathLang.Version = 1.5
+MathLang.Version = 1.6
 
 function MathLang.NewSource(File)
     if not MathLangTools.IsFileExist(File) then
@@ -54,6 +54,7 @@ function MathLang.ReadSource()
 
     Content = Content:gsub("@Version", tostring(MathLang.Version))
     Content = Content:gsub("@Language", "LMathLang")
+    Content = Content:gsub("@File", arg[1])
 
     Opened:close()
 
@@ -83,7 +84,17 @@ function MathLang.ParseSource()
                                     if not MathLangTools.Startswith(Line, "includes") then
                                         if not MathLangTools.Startswith(Line, "call") then
                                             if not MathLangTools.Startswith(Line, "for") then
-                                                Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                                                if not MathLangTools.Startswith(Line, "intr") then
+                                                    if not MathLangTools.Startswith(Line, "extract") then
+                                                        if not MathLangTools.Startswith(Line, "each") then
+                                                            if not MathLangTools.Startswith(Line, "delete") then
+                                                                if not MathLangTools.Startswith(Line, "typeof") then
+                                                                    Throw(Exceptions[2], "Line must end on semicolon.", LineNum)
+                                                                end
+                                                            end
+                                                        end
+                                                    end
+                                                end
                                             end
                                         end
                                     end
@@ -135,10 +146,20 @@ function MathLang.SolveIt(Beautify)
                 Throw(Exceptions[2], "Missing variable value.", LineNum)
             end
 
-            local ToBool = {["true"]=true, ["false"]=false}
-
             if not MathLangTools.IsNull(tonumber(Value)) then
                 _G[Name] = tonumber(Value)
+            elseif Value == "true" or Value == "false" then
+                local Raw = MathLangTools.Startswith(Name, "RAW_")
+
+                if Raw then
+                    Name = Name:gsub("RAW_", "")
+
+                    _G[Name] = Value
+                else
+                    local Booleans = {["true"] = true, ["false"] = false}
+
+                    _G[Name] = Booleans[Value]
+                end
             else
                 local SlicedText = MathLangTools.Slice(SplittedOnSpaces, 3, false)
                 local TheText = ""
@@ -194,7 +215,7 @@ function MathLang.SolveIt(Beautify)
                     local Data = MathLangTools.SplitString(TheText, " ")
 
                     if MathLangTools.IsNull(Data[2]) then
-                        Throw(Exceptions[1], "Missing array elements.", LineNum)
+                        Throw(Exceptions[2], "Missing array elements.", LineNum)
                     end
 
                     local ArrayInitializer = Data[1]
@@ -202,7 +223,7 @@ function MathLang.SolveIt(Beautify)
 
                     if not MathLangTools.Startswith(Elements, "{") then
                         if Elements ~= "" then
-                            Throw(Exceptions[1], "Missing start of bracket.", LineNum)
+                            Throw(Exceptions[2], "Missing start of bracket.", LineNum)
                         end
                     end
 
@@ -215,7 +236,7 @@ function MathLang.SolveIt(Beautify)
                     end
 
                     if not MathLangTools.Endswith(Elements, "}") then
-                        Throw(Exceptions[1], "Missing end of bracket.", LineNum)
+                        Throw(Exceptions[2], "Missing end of bracket.", LineNum)
                     end
 
                     local AsLuaTable = load("return "..Elements)
@@ -237,6 +258,56 @@ function MathLang.SolveIt(Beautify)
                     end
 
                     _G[Name] = AsLuaTable
+                elseif MathLangTools.Startswith(TheText, "%(") and MathLangTools.Endswith(TheText, "%)") then
+                    local Raw = MathLangTools.Startswith(Name, "RAW_")
+
+                    if Raw then
+                        Name = Name:gsub("RAW_", "")
+
+                        _G[Name] = TheText
+                    else
+                        local Content = TheText:sub(1, -2):sub(2)
+
+                        local LambdaBody = Content
+
+                        if MathLangTools.IsNull(LambdaBody) then
+                            Throw(Exceptions[2], "Missing lambda body.", LineNum)
+                        end
+
+                        if not MathLangTools.Startswith(LambdaBody, "%[") then
+                            Throw(Exceptions[2], "Body must start on right square bracket.", LineNum)
+                        end
+
+                        if not MathLangTools.Endswith(LambdaBody, "%]") then
+                            Throw(Exceptions[2], "Body must end on left square bracket.", LineNum)
+                        end
+
+                        LambdaBody = LambdaBody:sub(1, -2):sub(2)
+
+                        local LambdaBodyLines = MathLangTools.SplitString(LambdaBody, ";")
+
+                        local function RunLambda()
+                            for ProblemPosition, LambdaBodyLine in ipairs(LambdaBodyLines) do
+                                if LambdaBodyLine == string.rep(" ", #LambdaBodyLine) then
+                                    Throw(Exceptions[2], "Found spaces instead of math problem.", LineNum)
+                                end
+
+                                local Result = MathLangTools.EvalProblem(LambdaBodyLine)
+
+                                if type(Result) ~= "number" then
+                                    Throw(Exceptions[6], string.format("An error occurred while solving problem %s in lambda.", ProblemPosition), LineNum)
+                                end
+
+                                if UsingInstantly then
+                                    print(Result)
+                                end
+
+                                table.insert(Results, Result)
+                            end
+                        end
+
+                        _G[Name] = RunLambda
+                    end
                 else
                     if MathLangTools.Startswith(Value, "!") then
                         local Raw = MathLangTools.Startswith(Name, "RAW_")
@@ -245,13 +316,11 @@ function MathLang.SolveIt(Beautify)
                             local Content = _G[Value:sub(2)]
 
                             if type(Content) == "string" then
-                                if MathLangTools.IsNull(Content) then
-                                    Throw(Exceptions[5], string.format("\"%s\" is not defined.", Var), LineNum)
-                                end
-
                                 _G[Name] = tostring(Content:gsub([[\n]], "\n"))
                             elseif type(Content) == "number" then
                                 _G[Name] = Content
+                            else
+                                Throw(Exceptions[5], "Trying to get content from undefined variable.", LineNum)
                             end
                         elseif Raw then
                             Name = Name:gsub("RAW_", "")
@@ -365,7 +434,7 @@ function MathLang.SolveIt(Beautify)
                 end
 
                 if #Arguments < 3 then
-                    Throw(Exceptions[3], "Not enough arguments.", LineNum) 
+                    Throw(Exceptions[3], "Not enough arguments.", LineNum)
                 end
 
                 local Placeholder = Arguments[1]:gsub("~C", ":")
@@ -392,7 +461,7 @@ function MathLang.SolveIt(Beautify)
             end
 
             if MathLangTools.Startswith(Line, Allowed[29]) then
-                if MathLangTools.SplitString(Line, " ")[2] == nil then
+                if MathLangTools.IsNull(MathLangTools.SplitString(Line, " ")[2]) then
                     Throw(Exceptions[4], "Missing package name.", LineNum)
                 end
 
@@ -405,15 +474,23 @@ function MathLang.SolveIt(Beautify)
                 Package = Package:gsub("::", ".")
 
                 if Package == "files" then
-                    Package = "builtins.files" 
+                    Package = "builtins.files"
                 elseif Package == "algos" then
                     Package = "builtins.algos"
                 elseif Package == "pc" then
                     Package = "builtins.pc"
                 elseif Package == "arrays" then
                     Package = "builtins.arrays"
+                elseif Package == "tests" then
+                    Package = "builtins.tests"
+                elseif Package == "comparisons" then
+                    Package = "builtins.cmprs"
+                elseif Package == "conv" then
+                    Package = "builtins.conv"
+                elseif Package == "arithmetic" then
+                    Package = "builtins.arithmetic"
                 else
-                    if not MathLangTools.IsFileExist(Package:gsub("[.]", "\\")..".lua") then
+                    if not MathLangTools.IsFileExist(Package.."lua") then
                         Throw(Exceptions[4], "Package not exists.", LineNum)
                     end
                 end
@@ -454,7 +531,7 @@ function MathLang.SolveIt(Beautify)
                 if #Arguments > 1 then
                     local Args = MathLangTools.Slice(Arguments, 1, false)
 
-                    for Index=1, #Args do
+                    for Index = 1, #Args do
                         if type(Args[Index]) == "string" then
                             FunctionArguments[Index] = Args[Index]:gsub("~C", ":")
                         end
@@ -490,7 +567,7 @@ function MathLang.SolveIt(Beautify)
                         elseif ReturnType == "table" then
                             local Table = Output
 
-                            for Index=1, #Table do
+                            for Index = 1, #Table do
                                 Table[Index] = tostring(Table[Index])
                             end
 
@@ -499,7 +576,9 @@ function MathLang.SolveIt(Beautify)
                     end
                 end
 
-                -- Add better exception handling, like in problem solving exception handling.
+                -- TODO: Add better exception handling, like in problem solving exception handling.
+                Run()
+
                 if not pcall(Run) then
                     Throw(Exceptions[4], "Unnable to run function.", LineNum)
                 end
@@ -514,8 +593,33 @@ function MathLang.SolveIt(Beautify)
                     Throw(Exceptions[3], "Not enough arguments given.", LineNum)
                 end
 
-                local Start = tonumber(Arguments[1])
-                local End = tonumber(Arguments[2])
+                local Start = nil
+                local End = nil
+
+                if MathLangTools.Startswith(Arguments[1], "&") then
+                    local Link = Arguments[1]:sub(2, -1)
+
+                    if MathLangTools.IsNull(_G[Link]) then
+                        Throw(Exceptions[5], "Using link on null object.", LineNum)
+                    end
+
+                    Start = _G[Link]
+                else
+                    Start = tonumber(Arguments[1])
+                end
+
+                if MathLangTools.Startswith(Arguments[2], "&") then
+                    local Link = Arguments[2]:sub(2, -1)
+
+                    if MathLangTools.IsNull(_G[Link]) then
+                        Throw(Exceptions[5], "Using link on null object.", LineNum)
+                    end
+
+                    End = _G[Link]
+                else
+                    End = tonumber(Arguments[2])
+                end
+
                 local FunctionName = Arguments[3]
 
                 if MathLangTools.IsNull(Start) or MathLangTools.IsNull(End) then
@@ -523,7 +627,9 @@ function MathLang.SolveIt(Beautify)
                 end
 
                 if MathLangTools.IsNull(_G[FunctionName]) then
-                    Throw(Exceptions[4], "Function is not defined.", LineNum)
+                    if FunctionName ~= "&Print" then
+                        Throw(Exceptions[4], "Function is not defined.", LineNum)
+                    end
                 end
 
                 local FunctionArguments = {}
@@ -531,19 +637,23 @@ function MathLang.SolveIt(Beautify)
                 if #Arguments > 3 then
                     local Args = MathLangTools.Slice(Arguments, 3, false)
 
-                    for Index=1, #Args do
+                    for Index = 1, #Args do
                         if type(Args[Index]) == "string" then
                             FunctionArguments[Index] = Args[Index]:gsub("~C", ":")
                         end
                     end
                 end
 
-                for Number=Start, End do
+                for Number = Start, End do
                     local function RunIt()
-                        if #FunctionArguments == 0 then
-                            load(string.format("%s(%s)", FunctionName, tostring(Number)))()
+                        if FunctionName == "&Print" then
+                            print(Number)
                         else
-                            load(string.format("%s(%s, %s)", FunctionName, tostring(Number), MathLangTools.JoinList(FunctionArguments, ", ")))()
+                            if #FunctionArguments == 0 then
+                                load(string.format("%s(%s)", FunctionName, tostring(Number)))()
+                            else
+                                load(string.format("%s(%s, %s)", FunctionName, tostring(Number), MathLangTools.JoinList(FunctionArguments, ", ")))()
+                            end
                         end
                     end
 
@@ -555,6 +665,185 @@ function MathLang.SolveIt(Beautify)
 
             if MathLangTools.Startswith(Line, Allowed[32]) then
                 os.exit(0)
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[33]) then
+                local Arguments = MathLangTools.SplitString(Line, ":")
+
+                table.remove(Arguments, 1)
+
+                if #Arguments < 2 then
+                    Throw(Exceptions[3], "Not enough arguments given.", LineNum)
+                end
+
+                local ToIntercept = Arguments[1]
+                local ToWrite = Arguments[2]
+                local FunctionArguments = MathLangTools.Slice(Arguments, 2, false)
+                local FormattedArgs = {}
+
+                local ToLoad = ""
+
+                if not MathLangTools.IsNull(FunctionArguments) then
+                    if #FunctionArguments == 0 then
+                        FormattedArgs = nil
+                    else
+                        for _, Arg in ipairs(FunctionArguments) do
+                            local Formatted, _ = Arg:gsub("~C", ":")
+                            table.insert(FormattedArgs, Formatted)
+                        end
+                    end
+                else
+                    FormattedArgs = nil
+                end
+
+                if MathLangTools.IsNull(FormattedArgs) then
+                    ToLoad = string.format("%s()", ToIntercept)
+                else
+                    ToLoad = string.format("%s(%s)", ToIntercept, MathLangTools.JoinList(FormattedArgs, ", "))
+                end
+
+                local function Intercept()
+                    local Returned = load("return "..ToLoad)()
+
+                    if MathLangTools.IsNull(Returned) then
+                        _G[ToWrite] = -0.0
+                    else
+                        if type(Returned) ~= "string" then
+                            if type(Returned) ~= "number" then
+                                if type(Returned) ~= "boolean" then
+                                    if type(Returned) ~= "table" then
+                                        Throw(Exceptions[4], "Function returned unknown type.", LineNum)
+                                    end
+                                end
+                            end
+                        end
+
+                        _G[ToWrite] = Returned
+                    end
+                end
+
+                if not pcall(Intercept) then
+                    Throw(Exceptions[4], "Cannot intercept function.", LineNum)
+                end
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[34]) then
+                local Data = MathLangTools.SplitString(Line, " ")
+
+                table.remove(Data, 1)
+
+                local Target = Data[1]
+
+                if MathLangTools.IsNull(Target) then
+                    Throw(Exceptions[4], "Here's nothing to extract.", LineNum)
+                end
+
+                if not MathLangTools.IsFileExist(Target..".lmtl") then
+                    Throw(Exceptions[4], "Target not found.", LineNum)
+                end
+
+                MathLang.NewSource(Target..".lmtl")
+                MathLang.SolveIt(false)
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[35]) then
+                local Data = MathLangTools.SplitString(Line, ":")
+
+                table.remove(Data, 1)
+
+                if #Data < 2 then
+                    Throw(Exceptions[3], "Not enough arguments given.", LineNum)
+                end
+
+                local Array = Data[1]
+                local Handler = Data[2]
+                local Arguments = MathLangTools.Slice(Data, 2, false)
+
+                if MathLangTools.IsNull(Arguments) then
+                    Arguments = {}
+                end
+
+                local PrintValue = false
+
+                if MathLangTools.IsNull(_G[Array]) then
+                    Throw(Exceptions[4], "Expected array, found null.", LineNum)
+                end
+
+                if type(_G[Array]) ~= "table" then
+                    Throw(Exceptions[4], string.format("Expected array, found %s.", type(_G[Array])), LineNum)
+                end
+
+                if MathLangTools.IsNull(_G[Handler]) then
+                    if Handler == "&Print" then
+                        PrintValue = true
+                    else
+                        Throw(Exceptions[4], "Expected function, found null.", LineNum)
+                    end
+                end
+
+                local ToLoad = ""
+
+                for _, Value in ipairs(_G[Array]) do
+                    local function Handle()
+                        if PrintValue then
+                            print(Value)
+                        else
+                            if #Arguments > 0 then
+                                ToLoad = string.format("%s(%s, %s)", Handler, Value, MathLangTools.JoinList(Arguments, ", "))
+                            elseif #Arguments == 0 then
+                                ToLoad = string.format("%s(%s)", Handler, Value)
+                            end
+
+                            local Return = load("return "..ToLoad)()
+                            local ReturnsSomething = not MathLangTools.IsNull(Return)
+
+                            if ReturnsSomething then
+                                if type(ReturnsSomething) ~= "string" then
+                                    if type(ReturnsSomething) ~= "number" then
+                                        if type(ReturnsSomething) ~= "boolean" then
+                                            Throw(Exceptions[4], "Invalid return.", LineNum)
+                                        end
+                                    end
+                                end
+
+                                print(Return)
+                            end
+                        end
+                    end
+
+                    if not pcall(Handle) then
+                        Throw(Exceptions[4], "An exception occurred in iteration.", LineNum)
+                    end
+                end
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[36]) then
+                local ToDestroy = MathLangTools.SplitString(Line, " ")[2]
+
+                if MathLangTools.IsNull(_G[ToDestroy]) then
+                    Throw(Exceptions[4], "Trying to delete non-existent object.", LineNum)
+                end
+
+                if ToDestroy == "MathLang" or ToDestroy == "MathLangTools" then
+                    Throw(Exceptions[4], "Trying to delete language class.", LineNum)
+                end
+
+                _G[ToDestroy] = nil
+            end
+
+            if MathLangTools.Startswith(Line, Allowed[37]) then
+                local Object = MathLangTools.SplitString(Line, " ")[2]
+                local Type, _ = type(_G[Object]):gsub("table", "array")
+
+                if Type == "nil" then
+                    Type = "null"
+                end
+
+                io.write(Type)
+            end
+
+            if MathLangTools.Startswith(Line, '$$ignite') then
+                Throw(Exceptions[1], "Ignited.", LineNum)
             end
 
             if MathLangTools.Startswith(Line, Allowed[22]) then
@@ -579,14 +868,25 @@ function MathLang.SolveIt(Beautify)
                 -- Do nothing.
             elseif MathLangTools.Startswith(Line, Allowed[32]) then
                 -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[33]) then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[34]) then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[35]) then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[36]) then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, Allowed[37]) then
+                -- Do nothing.
             elseif MathLangTools.Startswith(Line, "help!") then
+                -- Do nothing.
+            elseif MathLangTools.Startswith(Line, "grammar!") then
                 -- Do nothing.
             else
                 local Equals = MathLangTools.EvalProblem(Line)
 
                 if type(Equals) == "table" then
                     local Message = Equals.Message
-                    local Details = ""
 
                     local DetailsByMessage = {
                         ["attempt to perform arithmetic on a nil value"] = "Using non-defined variable in problem.",
@@ -594,7 +894,7 @@ function MathLang.SolveIt(Beautify)
                         ["attempt to add a 'string' with a 'number'"] = "Trying to add number to string.",
                         ["attempt to perform arithmetic on a boolean value"] = "Trying do operations on a boolean.",
                         ["attempt to perform arithmetic on a table value"] = "Trying do operations on a array.",
-                        ["attempt to call a nil value"] = "Syntax wrong math problem."
+                        ["attempt to call a nil value"] = "Wrong syntax in math problem."
                     }
 
                     for LuaMessage, LanguageMessage in pairs(DetailsByMessage) do
@@ -618,13 +918,22 @@ function MathLang.SolveIt(Beautify)
     end
 
     for _, Line in ipairs(Lines) do
-        if Line:lower() == "help!;" then
+        if Line == "help!;" then
             local Doc = io.open("docs\\MathLang.txt", "r")
             local Content = Doc:read("a")
 
             Doc:close()
 
             print(Content)
+        end
+
+        if Line == "grammar!;" then
+            local GrammarFile = io.open("grammar.txt", "r")
+            local Grammar = GrammarFile:read("a")
+
+            GrammarFile:close()
+
+            print(Grammar)
         end
     end
 

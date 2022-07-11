@@ -55,7 +55,11 @@ Allowed = {
     "call",
     "for",
     "break",
-    "PI"
+    "intr",
+    "extract",
+    "each",
+    "delete",
+    "typeof"
 }
 
 Operators = {

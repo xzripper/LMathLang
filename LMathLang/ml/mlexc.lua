@@ -42,7 +42,7 @@ function Throw(Type, Message, Line, Kill)
         Kill = true
     end
 
-    print(string.format("\x1b[1mAn Lua MathLang error raised.\n    \x1b[31m%s\x1b[37m: \x1b[32m%s\x1b[37m\n        \x1b[34mLine: %s\x1b[37m.\x1b[0m", Type, Message, tostring(Line)))
+    print(string.format("\x1b[1mAn Lua MathLang error raised.\n    \x1b[31m%s\x1b[37m: \x1b[32m%s\x1b[37m\n        \x1b[34mLine: %s.\x1b[37m\x1b[0m", Type, Message, tostring(Line)))
 
     if Kill then
         os.exit(1)
